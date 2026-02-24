@@ -1,11 +1,17 @@
 from nodes.detect_anomaly import detect_anomaly
-
-# Start with an empty state — just like LangGraph will do
-state = {}
+from nodes.classify_failure import classify_failure
 
 # Run Node 1
-result = detect_anomaly(state)
+state = {}
+state = detect_anomaly(state)
 
-print("\n--- State after Node 1 ---")
-print(f"Status: {result['status']}")
-print(f"Failed pipelines found: {len(result['failed_pipelines'])}")
+# Run Node 2
+state = classify_failure(state)
+
+print("\n--- State after Node 2 ---")
+for p in state["failed_pipelines"]:
+    print(f"\nPipeline: {p['name']}")
+    print(f"  Failure Type : {p['classification']['failure_type']}")
+    print(f"  Severity     : {p['classification']['severity']}")
+    print(f"  Business Impact: {p['classification']['business_impact']}")
+    print(f"  Fix Time     : {p['classification']['estimated_fix_time']}")

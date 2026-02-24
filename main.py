@@ -1,5 +1,11 @@
-from utils.claude_client import ask_claude
+from nodes.detect_anomaly import detect_anomaly
 
-response = ask_claude("Say hello and tell me you are ready to monitor data pipelines. Keep it to 2 sentences.")
+# Start with an empty state — just like LangGraph will do
+state = {}
 
-print(response)
+# Run Node 1
+result = detect_anomaly(state)
+
+print("\n--- State after Node 1 ---")
+print(f"Status: {result['status']}")
+print(f"Failed pipelines found: {len(result['failed_pipelines'])}")

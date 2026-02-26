@@ -1,15 +1,20 @@
-from nodes.detect_anomaly import detect_anomaly
-from nodes.classify_failure import classify_failure
-from nodes.investigate_upstream import investigate_upstream
-from nodes.generate_rca import generate_rca
-from nodes.notify_and_save import notify_and_save
+from agent.graph import datasense_agent
 
-state = {}
-state = detect_anomaly(state)
-state = classify_failure(state)
-state = investigate_upstream(state)
-state = generate_rca(state)
-state = notify_and_save(state)
+print("🚀 Starting DataSense AI Agent...\n")
 
-print(f"\n✅ AGENT COMPLETE — Status: {state['status']}")
-print(f"📁 Report saved to: {state['report_filename']}")
+# Run the compiled LangGraph agent
+result = datasense_agent.invoke({
+    "failed_pipelines": [],
+    "total_downstream_affected": [],
+    "rca_report": "",
+    "report_generated_at": "",
+    "report_filename": "",
+    "incident_data": {},
+    "status": "starting"
+})
+
+print("\n══════════════════════════════════════")
+print(f"✅ Agent finished — Status: {result['status']}")
+print(f"📁 Report: {result['report_filename']}")
+print(f"🔥 Downstream systems at risk: {len(result['total_downstream_affected'])}")
+print("══════════════════════════════════════")

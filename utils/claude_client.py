@@ -13,7 +13,7 @@ def ask_claude(prompt: str, system: str = "You are a senior data reliability eng
     """
     message = client.messages.create(
         model="claude-opus-4-6",
-        max_tokens=1024,
+        max_tokens=4096,
         system=system,
         messages=[
             {"role": "user", "content": prompt}

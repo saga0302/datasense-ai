@@ -20,7 +20,7 @@ When a data pipeline fails, DataSense AI:
 4. **Reports** — Generates a professional Root Cause Analysis report automatically
 5. **Notifies** — Saves the report and sends alerts to the team
 
-**Result:** Mean time to resolution drops from hours to under 60 seconds.
+**Result:** Mean time to resolution drops from hours to seconds.
 
 ---
 
@@ -59,7 +59,7 @@ Pipeline Failure Detected
 
 - Monitors **5 simulated pipelines** modeled after real Azure Data Factory infrastructure
 - Detects failures and maps **9 downstream systems** at risk
-- Generates complete RCA report in **under 60 seconds**
+- Generates complete RCA report in **just a few seconds**
 - **5 automated tests** passing via GitHub Actions CI/CD
 - Deployed live on Streamlit Cloud
 

@@ -4,7 +4,7 @@
 
 **Autonomous Pipeline Monitoring & Incident Response Agent**
 
-> An AI-powered data reliability platform that autonomously detects pipeline failures, classifies root causes, maps downstream impact, and generates executive-grade incident reports — all without human intervention.
+> An AI-powered data reliability platform that autonomously detects pipeline failures, classifies root causes, maps downstream impact, and generates executive-grade incident reports all without human intervention.
 
 **[Live Demo](https://datasense-ai-mkpy6qfcyxvamtvnvhyzxv.streamlit.app)**
 
@@ -57,7 +57,7 @@ Pipeline Failure Detected
 
 ## Key Results
 
-- Monitors **5 pipelines** with real-time health status
+- Monitors **5 simulated pipelines** modeled after real Azure Data Factory infrastructure
 - Detects failures and maps **9 downstream systems** at risk
 - Generates complete RCA report in **under 60 seconds**
 - **5 automated tests** passing via GitHub Actions CI/CD
@@ -94,10 +94,14 @@ python -m pytest tests/ -v
 
 ---
 
-## Motivation
+## Real-World Context
 
-Built to demonstrate AI-native data engineering — combining production Azure/Snowflake experience with LangGraph agent architecture and Claude AI to solve a real problem every data team faces: slow, manual incident response.
+Data pipeline failures are one of the most common and costly problems in data engineering. When a pipeline breaks, an on-call engineer manually digs through logs, traces dependencies, identifies the root cause, and writes an incident report, a process that can take hours while downstream dashboards, reports, and models sit broken.
+
+DataSense AI automates this entire workflow. A LangGraph agent detects failures, uses Claude AI to classify root causes and investigate blast radius, and delivers a professional incident report with no human intervention required.
+
+Same problem every data team faces. Solved with AI.
 
 ---
 
-*Built by Sagarika Raju — MS Analytics, USC*
+*Built by Sagarika Raju — MS Analytics, University of Southern California*

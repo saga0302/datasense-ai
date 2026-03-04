@@ -13,10 +13,10 @@
 ## What It Does
 
 1. **Detects** — Claude autonomously requests failed pipeline data through MCP tools
-2. **Classifies** — Uses Claude AI to classify failure type via structured prompt engineering
-3. **Investigates** — Claude requests full dependency map through MCP, tracing upstream sources and downstream blast radius across 9+ systems
+2. **Classifies** — Claude AI classifies failure type using RAG prompt engineering, retrieving similar past incidents from ChromaDB vector store to improve accuracy
+3. **Investigates** — Claude requests full dependency map through MCP — tracing upstream sources and downstream blast radius across 9+ systems
 4. **Reports** — Generates a professional Root Cause Analysis report automatically
-5. **Notifies** — Saves report that can be sent as alerts to teams
+5. **Notifies** — Saves report and sends alerts to the team
 
 ---
 
@@ -24,26 +24,41 @@
 ```
 Pipeline Failure Detected
          ↓
-[Node 1] detect_anomaly      → Scans pipelines, finds failures
+[Node 1] detect_anomaly      → Requests failed pipelines via MCP tool
          ↓
-[Node 2] classify_failure    → Claude AI classifies each failure type
+[Node 2] classify_failure    → Claude AI classifies failure type
+                               + RAG retrieves similar past incidents
+                                 from ChromaDB vector store
          ↓
-[Node 3] investigate_upstream → Maps 9+ downstream systems at risk
+[Node 3] investigate_upstream → Requests dependency map via MCP tool
+                                 Maps upstream sources + downstream
+                                 blast radius across 9+ systems
          ↓
 [Node 4] generate_rca        → Claude AI writes executive RCA report
          ↓
-[Node 5] notify_and_save     → Saves report, triggers Slack alert
+[Node 5] notify_and_save     → Saves .md + .json report, triggers alert
+         ↓
+      [END] Incident resolved in under 60 seconds
+```
+
+**Data Layer:** `data/mock_data.py` — single source of truth for all pipeline and dependency data
+
+**MCP Layer:** `mcp_server.py` exposes `scan_pipelines` and `get_downstream_impact` as MCP endpoints
+
+**RAG Layer:** `nodes/rag_retriever.py` indexes past incidents into ChromaDB and retrieves similar historical context on every classification
 ```
 
 ---
 
 ## Tech Stack
 
+| Layer | Technology |
+|-------|-----------|
 | AI Agent Orchestration | LangGraph (StateGraph) |
 | Generative AI | Anthropic Claude API |
 | Agent Tool Protocol | Model Context Protocol (MCP) |
+| Vector Store / RAG | ChromaDB + LangChain |
 | Dashboard | Streamlit |
-| Backend | Python |
 | CI/CD | GitHub Actions + pytest |
 
 ---
@@ -52,8 +67,10 @@ Pipeline Failure Detected
 
 - Monitors **5 simulated pipelines** modeled after real Azure Data Factory infrastructure
 - Detects failures and maps **9 downstream systems** at risk
-- Generates complete RCA report in **just a few seconds**
-- **5 automated tests** passing via GitHub Actions CI/CD
+- Generates complete RCA report in **under 60 seconds**
+- RAG pipeline retrieves **historical incident context** from ChromaDB vector store
+- MCP server exposes **pipeline diagnostic tools** as Model Context Protocol endpoints
+- **6 automated tests** passing via GitHub Actions CI/CD
 - Deployed live on Streamlit Cloud
 
 ---

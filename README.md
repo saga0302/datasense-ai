@@ -12,15 +12,11 @@
 
 ## What It Does
 
-When a data pipeline fails, DataSense AI:
-
-1. **Detects** — Scans all pipelines and identifies failures instantly
-2. **Classifies** — Uses Claude AI to classify failure type (timeout, schema error, permissions, etc.)
-3. **Investigates** — Maps the full blast radius across upstream and downstream dependencies
+1. **Detects** — Claude autonomously requests failed pipeline data through MCP tools
+2. **Classifies** — Uses Claude AI to classify failure type via structured prompt engineering
+3. **Investigates** — Claude requests full dependency map through MCP, tracing upstream sources and downstream blast radius across 9+ systems
 4. **Reports** — Generates a professional Root Cause Analysis report automatically
-5. **Notifies** — Saves the report and sends alerts to the team
-
-**Result:** Mean time to resolution drops from hours to seconds.
+5. **Notifies** — Saves report that can be sent as alerts to teams
 
 ---
 
@@ -43,15 +39,12 @@ Pipeline Failure Detected
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
 | AI Agent Orchestration | LangGraph (StateGraph) |
 | Generative AI | Anthropic Claude API |
-| Cloud Data Platform | Snowflake + Azure Data Factory |
+| Agent Tool Protocol | Model Context Protocol (MCP) |
 | Dashboard | Streamlit |
-| Backend | Python + FastAPI |
+| Backend | Python |
 | CI/CD | GitHub Actions + pytest |
-| Infrastructure | Azure (Event Hub, SQL Database) |
 
 ---
 
@@ -98,7 +91,7 @@ python -m pytest tests/ -v
 
 Data pipeline failures are one of the most common and costly problems in data engineering. When a pipeline breaks, an on-call engineer manually digs through logs, traces dependencies, identifies the root cause, and writes an incident report, a process that can take hours while downstream dashboards, reports, and models sit broken.
 
-DataSense AI automates this entire workflow. A LangGraph agent detects failures, uses Claude AI to classify root causes and investigate blast radius, and delivers a professional incident report with no human intervention required.
+DataSense AI automates this entire workflow. A LangGraph agent autonomously requests live pipeline data and dependency maps through Model Context Protocol (MCP) tools, uses Claude AI to classify root causes and investigate blast radius across 9+ downstream systems, and delivers a professional incident report in seconds with no human intervention required.
 
 Same problem every data team faces. Solved with AI.
 

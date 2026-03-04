@@ -2,6 +2,27 @@ import pytest
 from nodes.detect_anomaly import detect_anomaly
 from nodes.investigate_upstream import investigate_upstream
 
+# ── Critical Import Test ─────────────────────────────────────
+def test_all_critical_imports():
+    """
+    Verify every single module the app depends on can be imported.
+    Catches missing libraries before they reach Streamlit Cloud.
+    """
+    from agent.graph import datasense_agent
+    from nodes.detect_anomaly import detect_anomaly
+    from nodes.classify_failure import classify_failure
+    from nodes.investigate_upstream import investigate_upstream
+    from nodes.generate_rca import generate_rca
+    from nodes.notify_and_save import notify_and_save
+    from utils.mcp_client import scan_pipelines_via_mcp
+    from utils.mcp_client import get_downstream_via_mcp
+    from nodes.rag_retriever import retrieve_similar_incidents
+    from data.mock_data import MOCK_PIPELINES
+    from data.mock_data import DEPENDENCY_MAP
+    from utils.claude_client import ask_claude
+    import mcp_server
+    assert True
+
 # ── Test 1 ───────────────────────────────────────────────────
 def test_detect_anomaly_finds_failures():
     """Node 1 should find exactly 3 failed pipelines"""
@@ -65,3 +86,4 @@ def test_investigate_upstream_counts_downstream():
 
     assert "total_downstream_affected" in result
     assert len(result["total_downstream_affected"]) > 0
+

@@ -14,7 +14,7 @@
 
 1. **Detects** — Claude autonomously requests failed pipeline data through MCP tools
 2. **Classifies** — Claude AI classifies failure type using RAG prompt engineering, retrieving similar past incidents from ChromaDB vector store to improve accuracy
-3. **Investigates** — Claude requests full dependency map through MCP — tracing upstream sources and downstream blast radius across 9+ systems
+3. **Investigates** — Claude requests full dependency map through MCP, tracing upstream sources and downstream blast radius across 9+ systems
 4. **Reports** — Generates a professional Root Cause Analysis report automatically
 5. **Notifies** — Saves report and sends alerts to the team
 
@@ -106,7 +106,7 @@ python -m pytest tests/ -v
 
 ## Real-World Context
 
-Data pipeline failures are one of the most common and costly problems in data engineering. When a pipeline breaks, an on-call engineer manually digs through logs, traces dependencies, identifies the root cause, and writes an incident report, a process that can take hours while downstream dashboards, reports, and models sit broken.
+Data pipeline failures are one of the most common and costly problems in data engineering. When a pipeline breaks, an on call engineer manually digs through logs, traces dependencies, identifies the root cause, and writes an incident report, a process that can take hours while downstream dashboards, reports, and models sit broken.
 
 DataSense AI automates this entire workflow. A LangGraph agent autonomously requests live pipeline data and dependency maps through Model Context Protocol (MCP) tools, uses Claude AI to classify root causes and investigate blast radius across 9+ downstream systems, and delivers a professional incident report in seconds with no human intervention required.
 

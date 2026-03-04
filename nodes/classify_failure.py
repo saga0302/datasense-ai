@@ -1,5 +1,6 @@
 from utils.claude_client import ask_claude
 import json
+from nodes.rag_retriever import retrieve_similar_incidents 
 
 def classify_failure(state: dict) -> dict:
     """
@@ -14,20 +15,27 @@ def classify_failure(state: dict) -> dict:
     for pipeline in failed_pipelines:
         print(f"   → Classifying: {pipeline['name']}...")
 
+        # Get historical context from RAG
+        historical_context = retrieve_similar_incidents(pipeline['error'])
+
         # This is prompt engineering — we give Claude a role, context, and strict output format
         prompt = f"""
 You are analyzing a data pipeline failure. Classify this failure and return ONLY a JSON object, no other text.
+
+{historical_context}
 
 Pipeline Name: {pipeline['name']}
 Error Message: {pipeline['error']}
 Database: {pipeline['database']}
 
-Return this exact JSON structure:
+Using the historical context above to inform your classification,
+return this exact JSON structure:
 {{
-    "failure_type": "one of: CONNECTION_ERROR, SCHEMA_ERROR, PERMISSION_ERROR, DATA_QUALITY_ERROR, TIMEOUT_ERROR, UNKNOWN",
-    "severity": "one of: LOW, MEDIUM, HIGH, CRITICAL",
-    "business_impact": "one sentence describing the business impact",
-    "estimated_fix_time": "estimated time to fix e.g. 15 minutes, 1 hour, 4 hours"
+    "failure_type": "CONNECTION_ERROR or SCHEMA_ERROR or TIMEOUT_ERROR or PERMISSION_ERROR",
+    "severity": "LOW or MEDIUM or HIGH or CRITICAL",
+    "business_impact": "one sentence",
+    "estimated_fix_time": "e.g. 30 minutes",
+    "historical_pattern": "brief note if this matches a past incident pattern"
 }}
 """
         response = ask_claude(

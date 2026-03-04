@@ -1,0 +1,40 @@
+{
+  "incident_id": "INC-20260303_204021",
+  "generated_at": "2026-03-03 20:40:21",
+  "total_failed_pipelines": 3,
+  "total_downstream_affected": 9,
+  "downstream_systems": [
+    "regulatory_compliance_export",
+    "board_reporting_dashboard",
+    "churn_prediction_model",
+    "sales_forecast_model",
+    "CFO_weekly_report",
+    "customer_360_report",
+    "executive_dashboard",
+    "marketing_attribution",
+    "finance_reporting_etl"
+  ],
+  "pipelines": [
+    {
+      "name": "sales_daily_etl",
+      "error": "Connection timeout to source database",
+      "failure_type": "TIMEOUT_ERROR",
+      "severity": "HIGH",
+      "estimated_fix_time": "30 minutes"
+    },
+    {
+      "name": "customer_data_warehouse",
+      "error": "Schema mismatch: column 'revenue' not found",
+      "failure_type": "SCHEMA_ERROR",
+      "severity": "HIGH",
+      "estimated_fix_time": "1 hour"
+    },
+    {
+      "name": "finance_reporting_etl",
+      "error": "Insufficient permissions on S3 bucket",
+      "failure_type": "PERMISSION_ERROR",
+      "severity": "HIGH",
+      "estimated_fix_time": "1 hour"
+    }
+  ]
+}

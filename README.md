@@ -46,7 +46,6 @@ Pipeline Failure Detected
 **MCP Layer:** `mcp_server.py` exposes `scan_pipelines` and `get_downstream_impact` as MCP endpoints
 
 **RAG Layer:** `nodes/rag_retriever.py` indexes past incidents into ChromaDB and retrieves similar historical context on every classification
-```
 
 ---
 

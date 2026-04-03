@@ -6,7 +6,7 @@ def generate_rca(state: dict) -> dict:
     Node 4: Takes everything found in Nodes 1, 2, 3 and asks Claude
     to write a complete professional Root Cause Analysis report.
     """
-    print("\n📝 Node 4: Generating RCA report with Claude AI...")
+    print("\n Node 4: Generating RCA report with Claude AI...")
 
     failed_pipelines = state.get("failed_pipelines", [])
     total_downstream = state.get("total_downstream_affected", [])
@@ -16,15 +16,23 @@ def generate_rca(state: dict) -> dict:
     for p in failed_pipelines:
         c = p.get("classification", {})
         d = p.get("dependencies", {})
+        ml = p.get("ml_score", {})
+
         pipeline_summary += f"""
 Pipeline: {p['name']}
 - Error: {p['error']}
 - Failure Type: {c.get('failure_type', 'UNKNOWN')}
-- Severity: {c.get('severity', 'UNKNOWN')}
+- Claude Severity: {c.get('severity', 'UNKNOWN')}
 - Business Impact: {c.get('business_impact', 'Unknown')}
 - Estimated Fix Time: {c.get('estimated_fix_time', 'Unknown')}
 - Upstream Sources: {', '.join(d.get('upstream_sources', []))}
 - Downstream Dependents: {', '.join(d.get('downstream_dependents', []))}
+
+ML ANOMALY ASSESSMENT (Isolation Forest):
+- Anomaly Score: {ml.get('anomaly_score', 'N/A')} / 1.000
+- ML Severity: {ml.get('severity_label', 'N/A')}
+- Primary Signals: {ml.get('top_features', 'N/A')}
+- Orders Analysed: {ml.get('orders_analysed', 0):,}
 """
 
     prompt = f"""
@@ -56,7 +64,7 @@ Write in a professional tone suitable for a VP or CTO to read.
         system="You are a senior data reliability engineer writing formal incident reports for executive leadership. Be precise, professional, and actionable."
     )
 
-    print("   ✅ RCA report generated successfully!")
+    print(" RCA report generated successfully!")
 
     return {
         **state,

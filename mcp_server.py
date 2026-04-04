@@ -30,12 +30,12 @@ async def handle_list_tools() -> list[types.Tool]:
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     if name == "scan_pipelines":
-        from data.mock_data import PIPELINE_FAILURES
-        failed = [p for p in PIPELINE_FAILURES if p["status"] == "FAILED"]
+        from data.pipeline_runs import MOCK_PIPELINES
+        failed = [p for p in MOCK_PIPELINES if p["status"] == "FAILED"]
         return [types.TextContent(type="text", text=json.dumps(failed, indent=2))]
 
     elif name == "get_downstream_impact":
-        from data.mock_data import DEPENDENCY_MAP
+        from data.pipeline_runs import DEPENDENCY_MAP
         pipeline_name = arguments.get("pipeline_name", "")
         deps = DEPENDENCY_MAP.get(pipeline_name, {})
         return [types.TextContent(type="text", text=json.dumps(deps, indent=2))]

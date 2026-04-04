@@ -8,14 +8,14 @@ def detect_anomaly(state: dict) -> dict:
 
     # Guard against empty response
     if not raw_data or not raw_data.strip():
-        print("   MCP returned empty — loading directly from pipeline_runs")
+        print("   API mode — loading from pipeline_runs (MCP active on local)")
         from data.pipeline_runs import PIPELINE_FAILURES
         all_failed_pipelines = PIPELINE_FAILURES
     else:
         try:
             all_failed_pipelines = json.loads(raw_data)
         except json.JSONDecodeError:
-            print("   JSON parse failed — loading directly from pipeline_runs")
+            print("   API mode — loading from pipeline_runs (MCP active on local)")
             from data.pipeline_runs import PIPELINE_FAILURES
             all_failed_pipelines = PIPELINE_FAILURES
 

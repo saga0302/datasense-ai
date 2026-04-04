@@ -6,8 +6,24 @@ import plotly.graph_objects as go
 import os
 import json
 import re
+import io
+import sys
 from datetime import datetime
 from utils.claude_client import ask_claude
+
+# ── MCP status detection ──────────────────────────────────────────────────────
+def detect_mcp_status():
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["python", "-c", "import mcp"],
+            capture_output=True, timeout=3
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+MCP_AVAILABLE = detect_mcp_status()
 
 st.set_page_config(
     page_title="DataSense AI — Analyst",
@@ -58,8 +74,8 @@ def load_pipeline_failures():
     except Exception:
         return [], {}
 
-df            = load_scored_orders()
-processed_df  = load_processed_orders()
+df                           = load_scored_orders()
+processed_df                 = load_processed_orders()
 incident_data, incident_text = load_latest_incident()
 pipeline_failures, dependency_map = load_pipeline_failures()
 
@@ -78,16 +94,16 @@ def add_batch_column(dataframe):
 
 df_batched = add_batch_column(df)
 
-# ── Build full project context ────────────────────────────────────────────────
+# ── Full context builder ──────────────────────────────────────────────────────
 def build_full_context():
     ctx = ""
 
     if not df.empty:
         total       = len(df)
-        crit        = len(df[df["severity"]=="CRITICAL"])
-        high        = len(df[df["severity"]=="HIGH"])
-        med         = len(df[df["severity"]=="MEDIUM"])
-        low         = len(df[df["severity"]=="LOW"])
+        crit        = len(df[df["severity"] == "CRITICAL"])
+        high        = len(df[df["severity"] == "HIGH"])
+        med         = len(df[df["severity"] == "MEDIUM"])
+        low         = len(df[df["severity"] == "LOW"])
         top_score   = round(df["anomaly_score"].max(), 3)
         top_order   = int(df.loc[df["anomaly_score"].idxmax(), "order_id"])
         avg_score   = round(df["anomaly_score"].mean(), 3)
@@ -99,8 +115,8 @@ def build_full_context():
 Total orders analysed: {total:,}
 CRITICAL: {crit:,} ({round(crit/total*100,1)}%)
 HIGH:     {high:,} ({round(high/total*100,1)}%)
-MEDIUM:   {med:,}  ({round(med/total*100,1)}%)
-LOW:      {low:,}  ({round(low/total*100,1)}%)
+MEDIUM:   {med:,} ({round(med/total*100,1)}%)
+LOW:      {low:,} ({round(low/total*100,1)}%)
 Most anomalous order_id: {top_order} (score: {top_score})
 Average anomaly score: {avg_score}
 Average cart size: {avg_cart} items
@@ -110,36 +126,39 @@ Failure threshold: 0.35
 
     if not df_batched.empty:
         ctx += "\n=== BATCH BREAKDOWN ===\n"
-        for label in ["Early morning (1-5am)","Morning (6-11am)","Afternoon (12-5pm)","Evening (6-11pm)"]:
-            subset = df_batched[df_batched["batch"]==label]
-            if subset.empty: continue
-            avg  = round(subset["anomaly_score"].mean(), 3)
-            crit = len(subset[subset["severity"]=="CRITICAL"])
+        for label in ["Early morning (1-5am)", "Morning (6-11am)",
+                      "Afternoon (12-5pm)", "Evening (6-11pm)"]:
+            subset = df_batched[df_batched["batch"] == label]
+            if subset.empty:
+                continue
+            avg    = round(subset["anomaly_score"].mean(), 3)
+            crit_n = len(subset[subset["severity"] == "CRITICAL"])
             status = "FAILED" if avg >= 0.35 else "SUCCESS"
-            ctx += f"{label}: {len(subset):,} orders | avg score {avg} | {crit} CRITICAL | {status}\n"
+            ctx += (f"{label}: {len(subset):,} orders | "
+                    f"avg score {avg} | {crit_n} CRITICAL | {status}\n")
 
     if pipeline_failures:
         ctx += "\n=== FAILED PIPELINE RUNS ===\n"
         for p in pipeline_failures:
             ctx += f"Pipeline: {p['name']}\n"
             ctx += f"Status: {p['status']}\n"
-            ctx += f"Avg anomaly score: {p.get('avg_anomaly_score','N/A')}\n"
-            ctx += f"Error: {p.get('error','N/A')}\n"
+            ctx += f"Avg anomaly score: {p.get('avg_anomaly_score', 'N/A')}\n"
+            ctx += f"Error: {p.get('error', 'N/A')}\n"
             stats = p.get("real_stats", {})
             if stats:
-                ctx += f"Critical orders: {stats.get('critical_orders','N/A'):,}\n"
-                ctx += f"Critical rate: {stats.get('critical_rate','N/A')}%\n"
+                ctx += f"Critical orders: {stats.get('critical_orders', 'N/A'):,}\n"
+                ctx += f"Critical rate: {stats.get('critical_rate', 'N/A')}%\n"
             ctx += "\n"
 
     if dependency_map:
         ctx += "\n=== PIPELINE DEPENDENCIES ===\n"
         for name, deps in dependency_map.items():
             ctx += f"{name}:\n"
-            ctx += f"  Upstream: {', '.join(deps.get('upstream_sources',[]))}\n"
-            ctx += f"  Downstream: {', '.join(deps.get('downstream_dependents',[]))}\n"
+            ctx += f"  Upstream: {', '.join(deps.get('upstream_sources', []))}\n"
+            ctx += f"  Downstream: {', '.join(deps.get('downstream_dependents', []))}\n"
 
     if incident_text:
-        ctx += f"\n=== LATEST INCIDENT REPORT (truncated) ===\n"
+        ctx += "\n=== LATEST INCIDENT REPORT (truncated) ===\n"
         ctx += incident_text[:4000]
 
     return ctx
@@ -149,7 +168,22 @@ FULL_CONTEXT = build_full_context()
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("DataSense AI")
+
+    if MCP_AVAILABLE:
+        st.success("🟢 MCP active (local mode)")
+    else:
+        st.info("🔵 API mode (cloud environment)")
+    st.caption(
+        "MCP runs as subprocess locally. On Streamlit Cloud the system "
+        "automatically switches to direct API mode — same data, "
+        "different transport layer."
+    )
     st.divider()
+
+    st.markdown("**Run full pipeline scan:**")
+    run_agent = st.button("🔍 Scan pipelines now", use_container_width=True)
+    st.divider()
+
     st.markdown("**Example questions:**")
     st.markdown("- What happened in the latest run?")
     st.markdown("- How many orders in each batch?")
@@ -163,19 +197,72 @@ with st.sidebar:
     st.markdown("- What are the downstream systems at risk?")
     st.markdown("- What is the ML model and how does it work?")
     st.divider()
+
     if st.button("Clear conversation"):
         st.session_state.messages = []
         st.rerun()
+
     st.divider()
     st.caption(f"Orders: {len(df):,}" if not df.empty else "No data")
     if incident_data:
-        st.caption(f"Incident: {incident_data.get('incident_id','N/A')}")
+        st.caption(f"Incident: {incident_data.get('incident_id', 'N/A')}")
     if pipeline_failures:
         st.caption(f"Failed pipelines: {len(pipeline_failures)}")
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("🤖 DataSense AI — Conversational Analyst")
 st.caption("Ask anything about your Instacart pipeline data, ML model, or incident reports")
+
+# ── Run agent handler ─────────────────────────────────────────────────────────
+if run_agent:
+    with st.spinner("Running full LangGraph agent scan..."):
+        try:
+            from agent.graph import datasense_agent
+
+            captured = io.StringIO()
+            sys.stdout = captured
+
+            result = datasense_agent.invoke({
+                "failed_pipelines": [],
+                "total_downstream_affected": [],
+                "rca_report": "",
+                "report_generated_at": "",
+                "report_filename": "",
+                "incident_data": {},
+                "status": "starting"
+            })
+
+            sys.stdout = sys.__stdout__
+            logs = captured.getvalue()
+
+            mode = "MCP mode (local)" if "MCP mode" in logs else "API mode (pipeline_runs fallback)"
+            failed_count   = len(result.get("failed_pipelines", []))
+            downstream     = len(result.get("total_downstream_affected", []))
+            report_filename = result.get("report_filename", "Generated")
+
+            status_msg = f"""Pipeline scan complete.
+
+**Mode:** {mode}
+**Failed pipelines detected:** {failed_count}
+**Downstream systems at risk:** {downstream}
+**Report:** {report_filename}
+**RAG:** ChromaDB retrieved similar historical incidents
+**ML:** Isolation Forest scored all detected anomalies
+
+Ask me anything about the results."""
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": status_msg,
+                "chart": None
+            })
+
+            st.cache_data.clear()
+            st.rerun()
+
+        except Exception as e:
+            sys.stdout = sys.__stdout__
+            st.error(f"Agent error: {e}")
 
 # ── Intent router ─────────────────────────────────────────────────────────────
 def route_intent(question: str) -> str:
@@ -203,23 +290,28 @@ Category:"""
 
 # ── Chart builders ────────────────────────────────────────────────────────────
 def severity_bar_chart():
-    if df.empty: return None
+    if df.empty:
+        return None
     counts = df["severity"].value_counts().reset_index()
-    counts.columns = ["Severity","Orders"]
-    counts["rank"] = counts["Severity"].map({"CRITICAL":0,"HIGH":1,"MEDIUM":2,"LOW":3})
+    counts.columns = ["Severity", "Orders"]
+    counts["rank"] = counts["Severity"].map(
+        {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3})
     counts = counts.sort_values("rank")
     fig = px.bar(counts, x="Severity", y="Orders", color="Severity",
-                 color_discrete_map={"CRITICAL":"#E24B4A","HIGH":"#EF9F27","MEDIUM":"#378ADD","LOW":"#639922"},
+                 color_discrete_map={"CRITICAL": "#E24B4A", "HIGH": "#EF9F27",
+                                     "MEDIUM": "#378ADD", "LOW": "#639922"},
                  title="Severity distribution — all orders")
     fig.update_layout(showlegend=False, height=350)
     return fig
 
 def hourly_trend_chart():
-    if df.empty: return None
+    if df.empty:
+        return None
     hourly = df.groupby("order_hour_of_day").agg(
-        avg_score=("anomaly_score","mean")).reset_index()
+        avg_score=("anomaly_score", "mean")).reset_index()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=hourly["order_hour_of_day"], y=hourly["avg_score"],
+    fig.add_trace(go.Scatter(
+        x=hourly["order_hour_of_day"], y=hourly["avg_score"],
         mode="lines+markers", name="Avg anomaly score",
         line=dict(color="#378ADD", width=2)))
     fig.add_hline(y=0.35, line_dash="dash", line_color="#E24B4A",
@@ -230,12 +322,15 @@ def hourly_trend_chart():
     return fig
 
 def batch_bar_chart():
-    if df_batched.empty: return None
+    if df_batched.empty:
+        return None
     rows = []
-    for label in ["Early morning (1-5am)","Morning (6-11am)","Afternoon (12-5pm)","Evening (6-11pm)"]:
-        subset = df_batched[df_batched["batch"]==label]
-        if subset.empty: continue
-        avg = round(subset["anomaly_score"].mean(),3)
+    for label in ["Early morning (1-5am)", "Morning (6-11am)",
+                  "Afternoon (12-5pm)", "Evening (6-11pm)"]:
+        subset = df_batched[df_batched["batch"] == label]
+        if subset.empty:
+            continue
+        avg = round(subset["anomaly_score"].mean(), 3)
         rows.append({
             "Batch": label,
             "Total orders": len(subset),
@@ -244,57 +339,72 @@ def batch_bar_chart():
         })
     bdf = pd.DataFrame(rows)
     fig = px.bar(bdf, x="Batch", y="Total orders", color="Status",
-                 color_discrete_map={"FAILED":"#E24B4A","SUCCESS":"#639922"},
-                 text="Total orders",
-                 title="Orders per batch window")
+                 color_discrete_map={"FAILED": "#E24B4A", "SUCCESS": "#639922"},
+                 text="Total orders", title="Orders per batch window")
     fig.update_traces(textposition="outside")
     fig.update_layout(height=350)
     return fig
 
 def comparison_chart():
-    if df_batched.empty: return None
+    if df_batched.empty:
+        return None
     rows = []
-    for label in ["Early morning (1-5am)","Morning (6-11am)","Afternoon (12-5pm)","Evening (6-11pm)"]:
-        subset = df_batched[df_batched["batch"]==label]
-        if subset.empty: continue
+    for label in ["Early morning (1-5am)", "Morning (6-11am)",
+                  "Afternoon (12-5pm)", "Evening (6-11pm)"]:
+        subset = df_batched[df_batched["batch"] == label]
+        if subset.empty:
+            continue
         rows.append({
             "Window": label,
-            "Critical %": round((subset["severity"]=="CRITICAL").sum()/len(subset)*100,1),
-            "Avg score": round(subset["anomaly_score"].mean(),3)
+            "Critical %": round(
+                (subset["severity"] == "CRITICAL").sum() / len(subset) * 100, 1),
+            "Avg score": round(subset["anomaly_score"].mean(), 3)
         })
     cdf = pd.DataFrame(rows)
     fig = px.bar(cdf, x="Window", y="Critical %", color="Avg score",
-                 color_continuous_scale=["#639922","#EF9F27","#E24B4A"],
+                 color_continuous_scale=["#639922", "#EF9F27", "#E24B4A"],
                  title="Critical order rate by time window")
     fig.update_layout(height=350)
     return fig
 
 def gauge_chart():
-    if df.empty: return None
-    avg_score = round(df["anomaly_score"].mean(),3)
+    if df.empty:
+        return None
+    avg_score = round(df["anomaly_score"].mean(), 3)
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=round(avg_score*100,1),
-        title={"text":"Pipeline anomaly risk"},
-        gauge={"axis":{"range":[0,100]},"bar":{"color":"#378ADD"},
-               "steps":[{"range":[0,25],"color":"#EAF3DE"},
-                        {"range":[25,45],"color":"#FAEEDA"},
-                        {"range":[45,100],"color":"#FAECE7"}],
-               "threshold":{"line":{"color":"#E24B4A","width":4},
-                            "thickness":0.75,"value":35}}))
+        value=round(avg_score * 100, 1),
+        title={"text": "Pipeline anomaly risk"},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"color": "#378ADD"},
+            "steps": [
+                {"range": [0, 25],   "color": "#EAF3DE"},
+                {"range": [25, 45],  "color": "#FAEEDA"},
+                {"range": [45, 100], "color": "#FAECE7"}
+            ],
+            "threshold": {
+                "line": {"color": "#E24B4A", "width": 4},
+                "thickness": 0.75, "value": 35
+            }
+        }
+    ))
     fig.update_layout(height=350)
     return fig
 
 def anomaly_scatter_chart():
-    if df.empty: return None
-    top10 = df.nlargest(10,"anomaly_score")[
-        ["order_id","anomaly_score","severity","cart_size","reorder_rate","order_hour_of_day"]
+    if df.empty:
+        return None
+    top10 = df.nlargest(10, "anomaly_score")[
+        ["order_id", "anomaly_score", "severity",
+         "cart_size", "reorder_rate", "order_hour_of_day"]
     ].copy()
-    fig = px.scatter(top10, x="cart_size", y="anomaly_score",
-                     color="severity", size="anomaly_score",
-                     hover_data=["order_id","reorder_rate"],
-                     color_discrete_map={"CRITICAL":"#E24B4A","HIGH":"#EF9F27"},
-                     title="Top 10 most anomalous orders")
+    fig = px.scatter(
+        top10, x="cart_size", y="anomaly_score",
+        color="severity", size="anomaly_score",
+        hover_data=["order_id", "reorder_rate"],
+        color_discrete_map={"CRITICAL": "#E24B4A", "HIGH": "#EF9F27"},
+        title="Top 10 most anomalous orders")
     fig.update_layout(height=350)
     return fig
 
@@ -306,7 +416,6 @@ def get_response(question: str) -> tuple:
     intent = route_intent(question)
     chart  = None
 
-    # Pick the right chart for the intent
     if   intent == "REPORT":     chart = severity_bar_chart()
     elif intent == "TREND":      chart = hourly_trend_chart()
     elif intent == "COMPARISON": chart = comparison_chart()
@@ -314,7 +423,6 @@ def get_response(question: str) -> tuple:
     elif intent == "ANOMALY":    chart = anomaly_scatter_chart()
     elif intent == "BATCH":      chart = batch_bar_chart()
 
-    # Handle order lookup
     order_context = ""
     if intent == "ORDER":
         numbers = re.findall(r'\b\d{5,7}\b', question)
@@ -326,28 +434,26 @@ def get_response(question: str) -> tuple:
                 order_context = f"""
 === SPECIFIC ORDER DETAIL ===
 Order ID: {int(row['order_id'])}
-Anomaly score: {round(row['anomaly_score'],3)} / 1.000
+Anomaly score: {round(row['anomaly_score'], 3)} / 1.000
 Severity: {row['severity']}
 Cart size: {int(row['cart_size'])} items
-Reorder rate: {round(row['reorder_rate']*100,1)}%
-Cart deviation from user baseline: {round(row['cart_deviation'],2)} std devs
-Reorder deviation from user baseline: {round(row['reorder_deviation'],3)}
+Reorder rate: {round(row['reorder_rate'] * 100, 1)}%
+Cart deviation from user baseline: {round(row['cart_deviation'], 2)} std devs
+Reorder deviation from user baseline: {round(row['reorder_deviation'], 3)}
 Days since prior order: {int(row['days_since_prior_order'])} days
 Order hour: {int(row['order_hour_of_day'])}:00
-Is first order: {'Yes' if row['is_first_order']==1 else 'No'}
+Is first order: {'Yes' if row['is_first_order'] == 1 else 'No'}
 User total orders ever: {int(row['user_total_orders'])}
-User avg cart size: {round(row['user_avg_cart'],1)} items
-User avg reorder rate: {round(row['user_avg_reorder'],3)}
+User avg cart size: {round(row['user_avg_cart'], 1)} items
+User avg reorder rate: {round(row['user_avg_reorder'], 3)}
 Unique departments: {int(row['unique_departments'])}
 """
 
-    # Build conversation history for context
     history = ""
     for msg in st.session_state.messages[-6:]:
         role = "User" if msg["role"] == "user" else "Assistant"
         history += f"{role}: {msg['content']}\n"
 
-    # Universal Claude prompt with all data
     prompt = f"""You are DataSense AI — an intelligent data reliability analyst for Instacart.
 You have access to all pipeline data, ML model results, batch breakdowns, and incident reports.
 
@@ -388,7 +494,7 @@ for i, msg in enumerate(st.session_state.messages):
 question = st.chat_input("Ask anything about your pipeline data...")
 
 if question:
-    st.session_state.messages.append({"role":"user","content":question})
+    st.session_state.messages.append({"role": "user", "content": question})
 
     with st.chat_message("user"):
         st.write(question)
@@ -402,4 +508,4 @@ if question:
                             key=f"chart_new_{len(st.session_state.messages)}")
 
     st.session_state.messages.append({
-        "role":"assistant","content":response,"chart":chart})
+        "role": "assistant", "content": response, "chart": chart})

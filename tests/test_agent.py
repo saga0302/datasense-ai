@@ -14,7 +14,6 @@ def test_all_critical_imports():
     from utils.mcp_client import scan_pipelines_via_mcp
     from utils.mcp_client import get_downstream_via_mcp
     from nodes.rag_retriever import retrieve_similar_incidents
-    from data.pipeline_runs import PIPELINE_FAILURES
     from data.pipeline_runs import DEPENDENCY_MAP
     from utils.claude_client import ask_claude
     import mcp_server

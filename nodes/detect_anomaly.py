@@ -4,13 +4,32 @@ import json
 def detect_anomaly(state: dict) -> dict:
     print("Node 1: Scanning pipelines via MCP...")
 
-    # Claude requests pipeline data through MCP — not hardcoded anymore
     raw_data = scan_pipelines_via_mcp()
-    all_failed_pipelines = json.loads(raw_data)
 
-    print(f"Found {len(all_failed_pipelines)} failed pipeline(s) via MCP:")
+    # Guard against empty response
+    if not raw_data or not raw_data.strip():
+        print("   MCP returned empty — loading directly from pipeline_runs")
+        from data.pipeline_runs import PIPELINE_FAILURES
+        all_failed_pipelines = PIPELINE_FAILURES
+    else:
+        try:
+            all_failed_pipelines = json.loads(raw_data)
+        except json.JSONDecodeError:
+            print("   JSON parse failed — loading directly from pipeline_runs")
+            from data.pipeline_runs import PIPELINE_FAILURES
+            all_failed_pipelines = PIPELINE_FAILURES
+
+    if not all_failed_pipelines:
+        print("   ℹ️  No failed pipelines detected")
+        return {
+            **state,
+            "failed_pipelines": [],
+            "status": "no_failures"
+        }
+
+    print(f"Found {len(all_failed_pipelines)} failed pipeline(s):")
     for p in all_failed_pipelines:
-        print(f"   → {p['name']} | Error: {p['error']}")
+        print(f"   → {p['name']} | Score: {p.get('avg_anomaly_score', 'N/A')}")
 
     return {
         **state,

@@ -22,7 +22,7 @@ def scan_pipelines_via_mcp() -> str:
 
     except Exception:
         # Fallback for Streamlit Cloud — read directly from mock data
-        from data.mock_data import MOCK_PIPELINES
+        from data.pipeline_runs import MOCK_PIPELINES
         failed = [p for p in MOCK_PIPELINES if p["status"] == "FAILED"]
         return json.dumps(failed, indent=2)
 
@@ -50,11 +50,6 @@ def get_downstream_via_mcp(pipeline_name: str) -> str:
         return asyncio.run(_call())
 
     except Exception:
-        # Fallback for Streamlit Cloud — read directly from mock data
-        from data.mock_data import DEPENDENCY_MAP
-        deps = DEPENDENCY_MAP.get(pipeline_name, {
-            "upstream_sources": [],
-            "downstream_dependents": [],
-            "shared_infrastructure": []
-        })
-        return json.dumps(deps, indent=2)
+        # Fallback for Streamlit Cloud — read directly from pipeline_runs
+        from data.pipeline_runs import PIPELINE_FAILURES
+        return json.dumps(PIPELINE_FAILURES, indent=2)

@@ -27,7 +27,7 @@ def scan_pipelines_via_mcp() -> str:
 
 
 def get_downstream_via_mcp(pipeline_name: str) -> str:
-    """Get downstream impact — tries MCP first, falls back to mock data"""
+    """Get downstream impact — tries MCP first, falls back to DEPENDENCY_MAP"""
     try:
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
@@ -49,6 +49,11 @@ def get_downstream_via_mcp(pipeline_name: str) -> str:
         return asyncio.run(_call())
 
     except Exception:
-        # Fallback for Streamlit Cloud — read directly from pipeline_runs
-        from data.pipeline_runs import PIPELINE_FAILURES
-        return json.dumps(PIPELINE_FAILURES, indent=2)
+        # Fallback — return dependency data for this specific pipeline
+        from data.pipeline_runs import DEPENDENCY_MAP
+        deps = DEPENDENCY_MAP.get(pipeline_name, {
+            "upstream_sources": [],
+            "downstream_dependents": [],
+            "shared_infrastructure": []
+        })
+        return json.dumps(deps, indent=2)

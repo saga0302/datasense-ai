@@ -22,9 +22,8 @@ def scan_pipelines_via_mcp() -> str:
 
     except Exception:
         # Fallback for Streamlit Cloud — read directly from mock data
-        from data.pipeline_runs import MOCK_PIPELINES
-        failed = [p for p in MOCK_PIPELINES if p["status"] == "FAILED"]
-        return json.dumps(failed, indent=2)
+        from data.pipeline_runs import PIPELINE_FAILURES
+        return json.dumps(PIPELINE_FAILURES, indent=2)
 
 
 def get_downstream_via_mcp(pipeline_name: str) -> str:

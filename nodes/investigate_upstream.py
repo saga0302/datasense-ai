@@ -15,7 +15,7 @@ def investigate_upstream(state: dict) -> dict:
 
         # Guard against empty response
         if not raw_deps or not raw_deps.strip():
-            print("   API mode — loading from DEPENDENCY_MAP (MCP active on local)")
+            print("   🔵 API mode — loading from DEPENDENCY_MAP")
             from data.pipeline_runs import DEPENDENCY_MAP
             deps = DEPENDENCY_MAP.get(name, {
                 "upstream_sources": [],
@@ -26,13 +26,24 @@ def investigate_upstream(state: dict) -> dict:
             try:
                 deps = json.loads(raw_deps)
             except json.JSONDecodeError:
-                print("   API mode — loading from DEPENDENCY_MAP (MCP active on local)")
+                print("   🔵 API mode — loading from DEPENDENCY_MAP")
                 from data.pipeline_runs import DEPENDENCY_MAP
                 deps = DEPENDENCY_MAP.get(name, {
                     "upstream_sources": [],
                     "downstream_dependents": [],
                     "shared_infrastructure": []
                 })
+
+        # Guard: ensure deps is always a dict not a string
+        if not isinstance(deps, dict):
+            try:
+                deps = json.loads(deps)
+            except Exception:
+                deps = {
+                    "upstream_sources": [],
+                    "downstream_dependents": [],
+                    "shared_infrastructure": []
+                }
 
         pipeline["dependencies"] = deps
 

@@ -25,6 +25,7 @@
 
 ## Architecture
 
+```
 Real Instacart Data (3.4M orders → 131,209 with complete product detail)
 ↓
 Isolation Forest ML Model (unsupervised — learns normality, no labels needed)
@@ -42,6 +43,7 @@ Isolation Forest ML Model (unsupervised — learns normality, no labels needed)
 [Node 5]   notify_and_save      → Saves .md + .json report, triggers Slack alert
 ↓
 Conversational Analyst           → Ask anything in plain English with charts
+```
 
 ---
 

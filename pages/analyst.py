@@ -468,15 +468,14 @@ You have access to all pipeline data, ML model results, batch breakdowns, and in
 {question}
 
 === INSTRUCTIONS ===
-Answer the question directly and specifically using the data above.
-- Use real numbers from the data
-- If asked about batches: state exact order counts per batch
-- If asked about a specific order: give complete feature breakdown
-- If asked about the incident report: reference specific findings
-- If asked about the ML model: explain Isolation Forest in plain English
-- If asked about pipelines: mention which failed and the downstream impact
-- Keep response to 4-6 sentences unless the question needs more detail
-- Never say you cannot access data — all data is provided above
+Answer ONLY using the data provided above. 
+CRITICAL RULES:
+- NEVER mention sales_daily_etl, customer_data_warehouse, finance_reporting_etl, inventory_sync, or marketing_attribution — these do not exist in this system
+- The ONLY pipelines that exist are the 4 Instacart batches listed in BATCH BREAKDOWN above
+- The ONLY failed pipeline is instacart_earlymorning_batch
+- If asked about failed pipelines, state exactly 1 failed pipeline with its real stats
+- Use real numbers from the data only — never invent errors, downstream systems, or pipeline names
+- If the data above does not contain the answer, say so — do not guess
 """
 
     response = ask_claude(prompt)
